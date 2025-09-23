@@ -1,0 +1,128 @@
+import jieba
+import math
+import os
+from collections import Counter
+
+
+def read_file(file_path):
+    """读取文件内容"""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        print(f"错误：文件 {file_path} 不存在")
+        print(f"当前目录文件列表: {os.listdir('.')}")
+        return None
+    except Exception as e:
+        print(f"读取文件时出错: {e}")
+        return None
+
+
+def preprocess_text(text):
+    """预处理文本：分词并去除标点符号"""
+    if not text:
+        return []
+
+    # 使用jieba进行分词
+    words = list(jieba.cut(text))
+    # 只保留中文、英文和数字
+    filtered_words = []
+    for word in words:
+        if any(c.isalnum() for c in word):
+            filtered_words.append(word)
+    return filtered_words
+
+
+def calculate_cosine_similarity(text1, text2):
+    """计算两个文本的余弦相似度"""
+    if not text1 or not text2:
+        return 0.0
+
+    # 分词并统计词频
+    words1 = preprocess_text(text1)
+    words2 = preprocess_text(text2)
+
+    # 统计词频
+    counter1 = Counter(words1)
+    counter2 = Counter(words2)
+
+    # 获取所有词汇
+    all_words = set(counter1.keys()).union(set(counter2.keys()))
+
+    # 构建向量
+    vector1 = [counter1.get(word, 0) for word in all_words]
+    vector2 = [counter2.get(word, 0) for word in all_words]
+
+    # 计算点积
+    dot_product = sum(v1 * v2 for v1, v2 in zip(vector1, vector2))
+
+    # 计算模长
+    magnitude1 = math.sqrt(sum(v  **  2for v in vector1))
+    magnitude2 = math.sqrt(sum(v  **  2for v in vector2))
+
+    # 避免除以零
+    if magnitude1 * magnitude2 == 0:
+        return 0.0
+
+    # 计算余弦相似度
+    similarity = dot_product / (magnitude1 * magnitude2)
+    return similarity
+
+
+def write_result(output_path, similarity):
+    """将结果写入文件"""
+    try:
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(f"{similarity:.2f}")
+        print(f"结果已成功写入: {output_path}")
+    except Exception as e:
+        print(f"写入结果文件时出错: {e}")
+
+
+def main():
+    """主函数"""
+    print("=" * 50)
+    print("论文查重程序启动")
+    print("=" * 50)
+
+    # 显示当前工作目录和文件列表（用于调试）
+    current_dir = os.getcwd()
+    print(f"当前工作目录: {current_dir}")
+    print(f"目录中的文件: {os.listdir('.')}")
+    print("-" * 50)
+
+    # 设置正确的文件路径 - 修改为你实际的文件名
+    original_path = "orig.txt"  # 原文文件
+    plagiarized_path = "copied.txt"  # 抄袭版文件
+    output_path = "result.txt"  # 结果文件
+
+    # 检查文件是否存在
+    if not os.path.exists(original_path):
+        print(f"错误：原文文件 '{original_path}' 不存在")
+        return
+
+    if not os.path.exists(plagiarized_path):
+        print(f"错误：抄袭版文件 '{plagiarized_path}' 不存在")
+        return
+
+    # 读取文件内容
+    print("正在读取文件...")
+    original_text = read_file(original_path)
+    plagiarized_text = read_file(plagiarized_path)
+
+    if original_text is None or plagiarized_text is None:
+        print("文件读取失败，请检查文件内容")
+        return
+
+    # 计算相似度
+    print("正在计算相似度...")
+    similarity = calculate_cosine_similarity(original_text, plagiarized_text)
+
+    # 写入结果
+    write_result(output_path, similarity)
+    print(f"查重完成！相似度为: {similarity:.2f}")
+    print("=" * 50)
+
+
+if __name__ == "__main__":
+    main()
